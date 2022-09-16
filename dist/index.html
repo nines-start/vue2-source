@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+        <script src="vue.js"></script>
+        <!-- <script src="../vue.js"></script> -->
+    </head>
+
+    <body>
+        <div id="app" class="test" style="color: red">
+            <div class="number">{{a}}</div>
+            <div>name: {{obj.name}}</div>
+            <div>age: {{obj.age}}</div>
+        </div>
+
+        <script>
+            const app = new Vue({
+                el: "#app",
+                data: {
+                    a: 100,
+                    obj: {
+                        name: "小明",
+                        age: 10,
+                    },
+                },
+            });
+
+            setTimeout(() => {
+                app.a = 20;
+                app.obj.name = "自动更新的name";
+                app.obj.age = "自动更新的age";
+            }, 1000);
+        </script>
+    </body>
+</html>
