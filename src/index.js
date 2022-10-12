@@ -1,19 +1,25 @@
+import { initGlobalAPI } from "./global-api";
 import { initMixin } from "./instance/init";
 import { lifecycleMixin } from "./instance/lifecycle";
+import { stateMixin } from "./instance/state";
 import { renderMixin } from "./vdom";
 
-// options：用户传入的选项
 function Vue(options) {
     this._init(options);
 }
 
-// 将initMixin引入，并将Vue传过去，相当于扩展了init方法
 initMixin(Vue);
 
-// 混合生命周期 渲染
+stateMixin(Vue)
+
 lifecycleMixin(Vue);
-// render 
+
 renderMixin(Vue);
 
-// 导出
+initGlobalAPI(Vue)
+
 export default Vue;
+
+
+
+

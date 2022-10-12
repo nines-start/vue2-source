@@ -1,9 +1,11 @@
-import { isObject } from "../shared/until";
+import { isArray, isObject } from "../shared/util";
 import { arrayMethods } from "./array";
 import Dep from "./dep";
 
 class Observer {
     constructor(data) {
+        this.dep = new Dep();
+
         Object.defineProperty(data, "__ob__", {
             enumerable: false,
             configurable: false,
@@ -30,7 +32,7 @@ class Observer {
     }
 }
 export function defineReactive(data, key, value) {
-    observer(value);
+    let childOb = observer(value);
 
     // 给每个属性都添加一个dep
     let dep = new Dep();
@@ -42,6 +44,13 @@ export function defineReactive(data, key, value) {
             if (Dep.target) {
                 // 属性收集器，记住当前的watcher
                 dep.depend();
+
+                if (childOb) {
+                    childOb.dep.depend();
+                    if (isArray(value)) {
+                        dependArray(value);
+                    }
+                }
             }
 
             return value;
@@ -66,4 +75,16 @@ export function observer(data) {
         return data;
     }
     return new Observer(data);
+}
+
+function dependArray(value) {
+    for (let e, i = 0, l = value.length; i < l; i++) {
+        e = value[i];
+        if (e && e.__ob__) {
+            e.__ob__.dep.depend();
+        }
+        if (isArray(e)) {
+            dependArray(e);
+        }
+    }
 }

@@ -20,10 +20,16 @@ class Dep {
 
 // 添加一个全局变量,，保存当前的watcher
 Dep.target = null;
-export function pushTarget(watcher) {
-    Dep.target = watcher;
+
+const targetStack = [];
+
+export function pushTarget(target = null) {
+    targetStack.push(target);
+    Dep.target = target;
 }
+
 export function popTarget() {
-    Dep.target = null;
+    targetStack.pop();
+    Dep.target = targetStack[targetStack.length - 1];
 }
 export default Dep;

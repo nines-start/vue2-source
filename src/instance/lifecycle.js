@@ -13,12 +13,24 @@ export function lifecycleMixin(Vue) {
 }
 
 export function mountComponent(vm, el) {
-    vm.$el = el;
+    // 挂载之前调用beforeMount
+    callHook(vm, "beforeMount");
 
+    vm.$el = el;
     const updateComponent = () => {
         vm._update(vm._render());
     };
-
     new Watcher(vm, updateComponent, () => {}, {}, true);
-    vm._update(vm._render());
+
+    // 挂载后调用mounted
+    callHook(vm, "mounted");
+}
+
+export function callHook(vm, hook) {
+    const handlers = vm.$options[hook];
+    if (handlers) {
+        for (let i = 0, j = handlers.length; i < j; i++) {
+            handlers[i].call(vm);
+        }
+    }
 }

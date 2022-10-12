@@ -29,6 +29,7 @@ methods.forEach((method) => {
         }
         // 给数组新增的值也要劫持
         if (insert) ob.observeArray(insert);
+        ob.dep.notify();
         return result;
     };
 });

@@ -11,27 +11,41 @@
 
     <body>
         <div id="app" class="test" style="color: red">
-            <div class="number">{{a}}</div>
-            <div>name: {{obj.name}}</div>
-            <div>age: {{obj.age}}</div>
+            <div>{{obj}}</div>
+            <div>{{num}}</div>
         </div>
 
         <script>
             const app = new Vue({
                 el: "#app",
                 data: {
-                    a: 100,
                     obj: {
-                        name: "小明",
-                        age: 10,
+                        a: {
+                            b: {
+                                c: 100,
+                            },
+                        },
+                    },
+                    num: 10,
+                },
+                methods: {
+                    changeValue() {},
+                },
+                watch: {
+                    num: (newVal, oldVal) => {  
+                        console.log(newVal, oldVal);
+                    },
+                    obj: {
+                        handler(newVal, oldVal) {
+                            console.log("开启深度监测");
+                        },
+                        deep: true,
                     },
                 },
             });
-
             setTimeout(() => {
-                app.a = 20;
-                app.obj.name = "自动更新的name";
-                app.obj.age = "自动更新的age";
+                app.num++;
+                app.obj.a.b.c = 200;
             }, 1000);
         </script>
     </body>

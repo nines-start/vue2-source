@@ -98,6 +98,153 @@
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
   }
 
+  function isFunction(value) {
+    return typeof value === "function";
+  }
+  var _toString = Object.prototype.toString;
+  function isPlainObject(obj) {
+    return _toString.call(obj) === "[object Object]";
+  }
+  function isObject(obj) {
+    return obj !== null && _typeof(obj) === "object";
+  }
+  function hasOwn(obj, key) {
+    return hasOwnProperty.call(obj, key);
+  }
+  var isArray = Array.isArray;
+  function isNative(Ctor) {
+    return typeof Ctor === "function" && /native code/.test(Ctor.toString());
+  }
+  function parsePath(path) {
+    // 'obj.a.b.c'
+    var segments = path.split(".");
+    return function (obj) {
+      for (var i = 0; i < segments.length; i++) {
+        if (!obj) return; // 取值之后再把值赋回去
+
+        obj = obj[segments[i]];
+      }
+
+      return obj;
+    };
+  }
+
+  var callbacks = [];
+  var pending$1 = false;
+  var timerFunc;
+
+  if (typeof Promise !== "undefined" && isNative(Promise)) {
+    var p = Promise.resolve();
+
+    timerFunc = function timerFunc() {
+      p.then(flushCallbacks);
+    };
+  } else if (typeof MutationObserver !== "undefined" && (isNative(MutationObserver) || MutationObserver.toString() === "[object MutationObserverConstructor]")) {
+    var counter = 1;
+    var observer$1 = new MutationObserver(flushCallbacks);
+    var textNode = document.createTextNode(String(counter)); // 监控文本的数据，并监控文本节点中字符的变化
+
+    observer$1.observe(textNode, {
+      characterData: true
+    });
+
+    timerFunc = function timerFunc() {
+      counter = (counter + 1) % 2;
+      textNode.data = String(counter);
+    };
+  } else if (typeof setImmediate !== "undefined" && isNative(setImmediate)) {
+    timerFunc = function timerFunc() {
+      setImmediate(flushCallbacks);
+    };
+  } else {
+    timerFunc = function timerFunc() {
+      setTimeout(flushCallbacks, 0);
+    };
+  }
+
+  function flushCallbacks() {
+    pending$1 = false;
+    var copies = callbacks.slice(0);
+    callbacks.length = 0; // 清空callback
+
+    for (var i = 0; i < copies.length; i++) {
+      copies[i]();
+    }
+  }
+
+  function nextTick$1(cb, ctx) {
+    callbacks.push(cb);
+
+    if (!pending$1) {
+      pending$1 = true;
+      timerFunc();
+    }
+  }
+
+  var LIFECYCLE_HOOKS = ["beforeCreate", "created", "beforeMount", "mounted", "beforeUpdate", "updated", "beforeDestroy", "destroyed", "activated", "deactivated", "errorCaptured", "serverPrefetch", "renderTracked", "renderTriggered"];
+
+  var strats = Object.create(null);
+  LIFECYCLE_HOOKS.forEach(function (hook) {
+    strats[hook] = mergeLifecycleHook;
+  });
+
+  var defaultStrat = function defaultStrat(parentVal, childVal) {
+    return childVal === undefined ? parentVal : childVal;
+  }; // 生命周期的合并
+
+
+  function mergeLifecycleHook(parentVal, childVal) {
+    var res = childVal ? parentVal ? parentVal.concat(childVal) : isArray(childVal) ? childVal : [childVal] : parentVal;
+    return res ? dedupeHooks(res) : res;
+  }
+
+  function dedupeHooks(hooks) {
+    var res = [];
+
+    for (var i = 0; i < hooks.length; i++) {
+      if (res.indexOf(hooks[i]) === -1) {
+        res.push(hooks[i]);
+      }
+    }
+
+    return res;
+  }
+
+  function mergeOptions(parent, child) {
+    var options = {};
+
+    for (var key in parent) {
+      mergeField(key);
+    }
+
+    for (var _key in child) {
+      if (!hasOwn(parent, _key)) {
+        mergeField(_key);
+      }
+    } // 合并字段
+
+
+    function mergeField(key) {
+      var strat = strats[key] || defaultStrat;
+      options[key] = strat(parent[key], child[key]);
+    }
+
+    return options;
+  }
+
+  function initMixin$1(Vue) {
+    Vue.mixin = function (mixin) {
+      this.options = mergeOptions(this.options, mixin);
+      return this;
+    };
+  }
+
+  function initGlobalAPI(Vue) {
+    Vue.options = Object.create(null);
+    initMixin$1(Vue);
+    Vue.nextTick = nextTick$1;
+  }
+
   // 匹配{{}}
   var defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g; // 匹配文本标签
 
@@ -353,17 +500,6 @@
     return render;
   }
 
-  function isFunction(value) {
-    return typeof value === "function";
-  }
-  var _toString = Object.prototype.toString;
-  function isPlainObject(obj) {
-    return _toString.call(obj) === "[object Object]";
-  }
-  function isObject(obj) {
-    return obj !== null && _typeof(obj) === "object";
-  }
-
   var uid$1 = 0;
 
   var Dep = /*#__PURE__*/function () {
@@ -400,11 +536,83 @@
 
 
   Dep.target = null;
-  function pushTarget(watcher) {
-    Dep.target = watcher;
+  var targetStack = [];
+  function pushTarget() {
+    var target = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+    targetStack.push(target);
+    Dep.target = target;
   }
   function popTarget() {
-    Dep.target = null;
+    targetStack.pop();
+    Dep.target = targetStack[targetStack.length - 1];
+  }
+
+  var has = {};
+  var queue = [];
+  var pending = false;
+
+  function flushSchedulerQueue() {
+    var flushQueue = queue.slice(0);
+    queue = [];
+    has = {};
+    pending = false;
+    flushQueue.forEach(function (q) {
+      return q.run();
+    });
+  }
+
+  function queueWatcher(watcher) {
+    var id = watcher.id;
+
+    if (has[id] != null) {
+      return;
+    }
+
+    has[id] = true;
+    queue.push(watcher);
+
+    if (!pending) {
+      nextTick$1(flushSchedulerQueue);
+      pending = true;
+    }
+  }
+
+  var seenObjects = new Set();
+  function traverse(val) {
+    _traverse(val, seenObjects);
+
+    seenObjects.clear();
+    return val;
+  }
+
+  function _traverse(val, seen) {
+    var i, keys;
+    var isA = isArray(val);
+
+    if (val.__ob__) {
+      var depId = val.__ob__.dep.id;
+
+      if (seen.has(depId)) {
+        return;
+      }
+
+      seen.add(depId);
+    }
+
+    if (isA) {
+      i = val.length;
+
+      while (i--) {
+        _traverse(val[i], seen);
+      }
+    } else {
+      keys = Object.keys(val);
+      i = keys.length;
+
+      while (i--) {
+        _traverse(val[keys[i]], seen);
+      }
+    }
   }
 
   var uid = 0;
@@ -413,29 +621,49 @@
     function Watcher(vm, expOrFn, cb, options, isRenderWatcher) {
       _classCallCheck(this, Watcher);
 
+      if ((this.vm = vm) && isRenderWatcher) {
+        vm._watcher = this;
+      }
+
       this.id = ++uid;
       this.vm = vm;
       this.cb = cb;
 
+      if (options) {
+        this.deep = !!options.deep;
+        this.user = !!options.user;
+      } else {
+        this.deep = this.user = false;
+      }
+
       if (isFunction(expOrFn)) {
         this.getter = expOrFn;
+      } else {
+        this.getter = parsePath(expOrFn);
       }
 
       this.deps = [];
       this.depIds = new Set();
-      this.get();
+      this.value = this.get();
     }
 
     _createClass(Watcher, [{
       key: "get",
       value: function get() {
-        // 将当前的watcher放到全局变量上
+        var vm = this.vm; // 将当前的watcher放到全局变量上
         // this是当前watcher实例
+
         pushTarget(this); // 首先调用一次，让页面渲染
 
-        this.getter(); // 视图渲染完成后，清空这个值
+        var value = this.getter.call(vm, vm);
+
+        if (this.deep) {
+          traverse(value);
+        } // 视图渲染完成后，清空这个值
+
 
         popTarget();
+        return value;
       } // 让watcher记住dep
 
     }, {
@@ -452,7 +680,25 @@
     }, {
       key: "update",
       value: function update() {
-        this.get();
+        queueWatcher(this);
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        var vm = this.vm; // 新值
+
+        var value = this.get();
+
+        if (value !== this.value || isObject(value) || this.deep) {
+          // set new value
+          // 原来的值
+          var oldValue = this.value;
+          this.value = value; // 是用户的watcher
+
+          if (this.user) {
+            this.cb.call(vm, value, oldValue);
+          }
+        }
       }
     }]);
 
@@ -520,15 +766,26 @@
     };
   }
   function mountComponent(vm, el) {
+    // 挂载之前调用beforeMount
+    callHook(vm, "beforeMount");
     vm.$el = el;
 
     var updateComponent = function updateComponent() {
       vm._update(vm._render());
     };
 
-    new Watcher(vm, updateComponent, function () {}, {}, true);
+    new Watcher(vm, updateComponent, function () {}, {}, true); // 挂载后调用mounted
 
-    vm._update(vm._render());
+    callHook(vm, "mounted");
+  }
+  function callHook(vm, hook) {
+    var handlers = vm.$options[hook];
+
+    if (handlers) {
+      for (var i = 0, j = handlers.length; i < j; i++) {
+        handlers[i].call(vm);
+      }
+    }
   }
 
   // 数组原来原型上的方法
@@ -564,6 +821,7 @@
 
 
       if (insert) ob.observeArray(insert);
+      ob.dep.notify();
       return result;
     };
   });
@@ -572,6 +830,7 @@
     function Observer(data) {
       _classCallCheck(this, Observer);
 
+      this.dep = new Dep();
       Object.defineProperty(data, "__ob__", {
         enumerable: false,
         configurable: false,
@@ -607,7 +866,7 @@
   }();
 
   function defineReactive(data, key, value) {
-    observer(value); // 给每个属性都添加一个dep
+    var childOb = observer(value); // 给每个属性都添加一个dep
 
     var dep = new Dep(); // 这是一个闭包的形式，get和set都可以获取value，value不销毁
 
@@ -617,6 +876,14 @@
         if (Dep.target) {
           // 属性收集器，记住当前的watcher
           dep.depend();
+
+          if (childOb) {
+            childOb.dep.depend();
+
+            if (isArray(value)) {
+              dependArray(value);
+            }
+          }
         }
 
         return value;
@@ -642,11 +909,29 @@
     return new Observer(data);
   }
 
+  function dependArray(value) {
+    for (var e, i = 0, l = value.length; i < l; i++) {
+      e = value[i];
+
+      if (e && e.__ob__) {
+        e.__ob__.dep.depend();
+      }
+
+      if (isArray(e)) {
+        dependArray(e);
+      }
+    }
+  }
+
   function initState(vm) {
     var opts = vm.$options;
 
     if (opts.data) {
       initData(vm);
+    }
+
+    if (opts.watch) {
+      initWatch(vm, opts.watch);
     }
   } // 设置一个数据代理,取值和设置值的时候直接操作vm._data
 
@@ -662,8 +947,7 @@
   }
 
   function initData(vm) {
-    var data = vm.$options.data; // 将data放到实例vm上
-
+    var data = vm.$options.data;
     vm._data = data = isFunction(data) ? data.call(vm) : data || {};
 
     if (!isPlainObject(data)) {
@@ -671,18 +955,65 @@
       console.error("[Vue warn] data functions should return an object");
     }
 
-    observer(data); // 将vm._data用vm代理
+    observer(data);
 
     for (var key in data) {
       proxy(vm, "_data", key);
     }
   }
 
+  function initWatch(vm, watch) {
+    // 拿到watch后，循环watch
+    for (var key in watch) {
+      // 拿到watcher对应的方法 可能是string | Function | Object | Array
+      var handler = watch[key];
+
+      if (isArray(handler)) {
+        // 如果是数组，循环数组
+        for (var i = 0; i < handler.length; i++) {
+          createWatcher(vm, key, handler[i]);
+        }
+      } else {
+        createWatcher(vm, key, handler);
+      }
+    }
+  }
+
+  function createWatcher(vm, expOrFn, handler, options) {
+    if (isPlainObject(handler)) {
+      options = handler;
+      handler = handler.handler;
+    }
+
+    if (typeof handler === "string") {
+      handler = vm[handler];
+    } // 最终调用的是vm.$watch
+
+
+    return vm.$watch(expOrFn, handler, options);
+  }
+
+  function stateMixin(Vue) {
+    // watch的核心是new Watcher
+    Vue.prototype.$watch = function (expOrFn, cb, options) {
+      var vm = this;
+      options = options || {};
+      options.user = true;
+      new Watcher(vm, expOrFn, cb, options); // 如果是immediate就立即执行操作函数
+
+      if (options.immediate) {
+        cb.call(vm);
+      }
+    };
+  }
+
   function initMixin(Vue) {
     Vue.prototype._init = function (options) {
       var vm = this;
-      vm.$options = options;
+      vm.$options = mergeOptions(vm.constructor.options, options);
+      callHook(vm, "beforeCreate");
       initState(vm);
+      callHook(vm, "created");
 
       if (vm.$options.el) {
         vm.$mount(vm.$options.el);
@@ -726,6 +1057,10 @@
       return val === null ? "" : _typeof(val) === "object" ? JSON.stringify(val) : val;
     };
 
+    Vue.prototype.$nextTick = function (fn) {
+      return nextTick(fn, this);
+    };
+
     Vue.prototype._render = function () {
       var vm = this;
       var render = vm.$options.render; // 调用render，返回的结果是vnode
@@ -762,14 +1097,13 @@
 
   function Vue(options) {
     this._init(options);
-  } // 将initMixin引入，并将Vue传过去，相当于扩展了init方法
+  }
 
-
-  initMixin(Vue); // 混合生命周期 渲染
-
-  lifecycleMixin(Vue); // render 
-
-  renderMixin(Vue); // 导出
+  initMixin(Vue);
+  stateMixin(Vue);
+  lifecycleMixin(Vue);
+  renderMixin(Vue);
+  initGlobalAPI(Vue);
 
   return Vue;
 
