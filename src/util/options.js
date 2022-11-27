@@ -2,6 +2,9 @@ import { hasOwn, isArray } from "../shared/util";
 
 import { LIFECYCLE_HOOKS } from "../shared/constants";
 
+// 使用策略模式简化ifelse
+// 不同的钩子使用相同的策略
+// 相当于if()else if() else(){}...的形式
 
 // 定义一个策略对象
 const strats = Object.create(null);
@@ -15,6 +18,7 @@ const defaultStrat = function (parentVal, childVal) {
 };
 // 生命周期的合并
 export function mergeLifecycleHook(parentVal, childVal) {
+    // 最终合并的是一个数组
     const res = childVal
         ? parentVal
             ? parentVal.concat(childVal)
@@ -41,7 +45,6 @@ export function mergeOptions(parent, child) {
     for (const key in parent) {
         mergeField(key);
     }
-
     for (const key in child) {
         if (!hasOwn(parent, key)) {
             mergeField(key);

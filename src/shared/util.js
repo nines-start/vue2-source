@@ -13,14 +13,13 @@ export function isObject(obj) {
 
 export function hasOwn(obj, key) {
     return hasOwnProperty.call(obj, key);
-}
+}  
 
 export const isArray = Array.isArray;
 
 export function isNative(Ctor) {
     return typeof Ctor === "function" && /native code/.test(Ctor.toString());
 }
-
 
 export function parsePath(path) {
     // 'obj.a.b.c'
@@ -33,4 +32,14 @@ export function parsePath(path) {
         }
         return obj;
     };
+}
+
+export function noop(a, b, c) {}
+
+export function isUndef(v) {
+    return v === undefined || v === null;
+}
+
+export function isDef(v) {
+    return v !== undefined && v !== null;
 }

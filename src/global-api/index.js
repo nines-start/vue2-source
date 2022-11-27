@@ -7,3 +7,4 @@ export function initGlobalAPI(Vue) {
     initMixin(Vue);
     Vue.nextTick = nextTick;
 }
+

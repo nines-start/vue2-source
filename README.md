@@ -33,3 +33,13 @@ dist/index.html
 
 [vue2源码解析（七）：实现数组更新](https://juejin.cn/post/7153054841336496164)
 
+[vue2源码解析（八）：watch的实现](https://juejin.cn/post/7155282182318555166)
+
+[vue2源码解析（九）：实现computed](https://juejin.cn/post/7156762351339831332)
+
+[vue2源码解析（十）：dom diff 算法（上）](https://juejin.cn/post/7159391164892708877)
+
+[vue2源码解析（十一）：dom diff 算法 之 算法优化](https://juejin.cn/post/7169491457848705061)
+
+[vue2源码解析（十二）：dom diff 算法 之 暴力对比](https://juejin.cn/post/7170117954321776677)
+

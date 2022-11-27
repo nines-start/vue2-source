@@ -4,6 +4,9 @@ let callbacks = [];
 
 let pending = false;
 
+// nextTick中没有直接使用某个api，而是采用优雅降级的方式
+// 内部先采用Promise，如果不兼容就采用MutationObserver()，然后是seImmediate（ie专用），最后是setTimeout
+// 这些api是在浏览器中执行的，node不支持
 let timerFunc;
 
 if (typeof Promise !== "undefined" && isNative(Promise)) {
@@ -32,6 +35,7 @@ if (typeof Promise !== "undefined" && isNative(Promise)) {
         setImmediate(flushCallbacks);
     };
 } else {
+    // Fallback to setTimeout.
     timerFunc = () => {
         setTimeout(flushCallbacks, 0);
     };
@@ -44,7 +48,9 @@ function flushCallbacks() {
     for (let i = 0; i < copies.length; i++) {
         copies[i]();
     }
-}
+}       
+
+// nextTick不是创建了异步任务，而是将这个任务维护到队列中
 
 export function nextTick(cb, ctx) {
     callbacks.push(cb);

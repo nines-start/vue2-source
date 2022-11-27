@@ -10,7 +10,6 @@ class Dep {
         this.subs.push(sub);
     }
     depend() {
-        // 希望让当前的target也能记住dep
         Dep.target.addDep(this);
     }
     notify() {
@@ -23,6 +22,7 @@ Dep.target = null;
 
 const targetStack = [];
 
+// 单线程思想
 export function pushTarget(target = null) {
     targetStack.push(target);
     Dep.target = target;
@@ -32,4 +32,5 @@ export function popTarget() {
     targetStack.pop();
     Dep.target = targetStack[targetStack.length - 1];
 }
+
 export default Dep;

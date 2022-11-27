@@ -7,6 +7,7 @@ export function lifecycleMixin(Vue) {
         const vm = this;
         const el = vm.$el;
 
+        // patch既有初始化的功能，也有更新的功能
         // 将patch生成的el重新赋值给$el
         vm.$el = patch(el, vnode);
     };
@@ -17,9 +18,17 @@ export function mountComponent(vm, el) {
     callHook(vm, "beforeMount");
 
     vm.$el = el;
+    // 1.调用render方法产生虚拟节点
+    // 2.根据虚拟dom产生真实dom
+    // 3.将真实dom插入到el中
+    // vm._update(vm._render());
+
+    // 渲染和更新时调用的方法
     const updateComponent = () => {
         vm._update(vm._render());
     };
+
+    // isRenderWatcher参数为true，代表是一个渲染watcher
     new Watcher(vm, updateComponent, () => {}, {}, true);
 
     // 挂载后调用mounted

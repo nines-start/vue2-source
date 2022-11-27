@@ -4,22 +4,24 @@ import { lifecycleMixin } from "./instance/lifecycle";
 import { stateMixin } from "./instance/state";
 import { renderMixin } from "./vdom";
 
+// options：用户传入的选项
 function Vue(options) {
-    this._init(options);
+  this._init(options);
 }
 
-initMixin(Vue);
+/* 原型方法 */
 
-stateMixin(Vue)
+initMixin(Vue); // 扩展了init方法
 
+stateMixin(Vue);
+
+// 混合生命周期渲染
 lifecycleMixin(Vue);
-
+// render
 renderMixin(Vue);
 
-initGlobalAPI(Vue)
+/* 静态方法 */
+initGlobalAPI(Vue);
 
+// 导出
 export default Vue;
-
-
-
-

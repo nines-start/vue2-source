@@ -8,45 +8,14 @@
         <script src="vue.js"></script>
         <!-- <script src="../vue.js"></script> -->
     </head>
-
+    
     <body>
         <div id="app" class="test" style="color: red">
-            <div>{{obj}}</div>
-            <div>{{num}}</div>
+           
         </div>
 
         <script>
-            const app = new Vue({
-                el: "#app",
-                data: {
-                    obj: {
-                        a: {
-                            b: {
-                                c: 100,
-                            },
-                        },
-                    },
-                    num: 10,
-                },
-                methods: {
-                    changeValue() {},
-                },
-                watch: {
-                    num: (newVal, oldVal) => {  
-                        console.log(newVal, oldVal);
-                    },
-                    obj: {
-                        handler(newVal, oldVal) {
-                            console.log("开启深度监测");
-                        },
-                        deep: true,
-                    },
-                },
-            });
-            setTimeout(() => {
-                app.num++;
-                app.obj.a.b.c = 200;
-            }, 1000);
+           
         </script>
     </body>
 </html>

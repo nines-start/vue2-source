@@ -1,24 +1,32 @@
-
+// 匹配属性
 const attribute =
     /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
 
 const dynamicArgAttribute =
     /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+?\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/;
 
+// 匹配标签名
 const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z]*`;
 
+// ?:匹配不捕获，捕获xx:yy这种类型的标签
 const qnameCapture = `((?:${ncname}\\:)?${ncname})`;
 
+// 标签开头
+// `<` 开头 +（ `a-z`或`A-Z`或`_`）+（`-`或`.`或`0-9`或`_`或`a-z`或`A-Z`）+ （`:`可选） +（ `a-z`或`A-Z`或`_`）+（`-`或`.`或`0-9`或`_`或`a-z`或`A-Z`）
+// 所以标签可能有两种情况，一种是`<div`，另一种是`<div:xxx`,带有命名空间的形式。
 const startTagOpen = new RegExp(`^<${qnameCapture}`);
 
+// 匹配标签结束
 const startTagClose = /^\s*(\/?)>/;
 
+// 结尾标签
 const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`);
 
 export function parseHTML(html) {
     // 树根
     let root;
 
+    // 当前的父标签，永远指向栈中最后一个
     let currentParent;
 
     // 栈结构
@@ -32,6 +40,7 @@ export function parseHTML(html) {
         let textEnd = html.indexOf("<");
         // 等于0 ，是标签
         if (textEnd === 0) {
+
             const startTagMatch = parseStartTag();
             // 开始标签
             if (startTagMatch) {
@@ -57,7 +66,8 @@ export function parseHTML(html) {
         }
     }
 
-    // 将字符串进行截取操作， 然后替换html
+    // 截取的方法 step是截取的位置,substring不传结束索引end，会一直截取到末尾
+    // 将字符串进行截取操作，然后替换html
     function advance(n) {
         html = html.substring(n);
     }
@@ -66,12 +76,15 @@ export function parseHTML(html) {
     function parseStartTag() {
         const start = html.match(startTagOpen);
         if (start) {
+            // 匹配到后将标签名和属性拿出来，放到一个对象里面
             const match = {
                 tagName: start[1],
                 attrs: [],
             };
             // 获取标签后删除
             advance(start[0].length);
+            // 如果没有遇到闭合标签，说明没有属性
+            // 而且还要能匹配到属性
             let end, attr;
 
             // 不是开始标签的结束，并且是属性就一直匹配
@@ -79,7 +92,7 @@ export function parseHTML(html) {
                 !(end = html.match(startTagClose)) &&
                 (attr = html.match(attribute))
             ) {
-                // 使用双引号，属性值是第3项，使用单引号，是第四项， 不用引号是是第五项
+                // 使用双引号，属性值是第3项，使用单引号，是第四项不用引号是是第五项
                 match.attrs.push({
                     name: attr[1],
                     value: attr[3] || attr[4] || attr[5],
@@ -111,6 +124,8 @@ export function parseHTML(html) {
 
     // 处理开始标签
     function handleStartTag(match) {
+        // 匹配元素出栈后，此时栈中最后一个元素是出栈元素的父亲。
+
         const { tagName, attrs } = match;
         const element = createASTElement(tagName, attrs);
 
@@ -134,7 +149,6 @@ export function parseHTML(html) {
 
         // 元素闭合时，可以知道这个标签的父亲是谁
         // 同时也知道这个父亲的子元素
-        // 双向检测
         if (currentParent) {
             element.parent = currentParent;
             currentParent.children.push(element);
@@ -143,6 +157,7 @@ export function parseHTML(html) {
 
     function charts(text) {
         text = text.trim();
+        // 如果有文本，就将文本放入当前的父标签
         if (text) {
             currentParent.children.push({
                 // 文本类型是3

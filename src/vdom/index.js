@@ -1,5 +1,10 @@
+import { nextTick } from "../util/next-tick";
+
 export function renderMixin(Vue) {
+    // 这几种方法都是用对象描述dom的结构
+
     // 创建元素
+    // 参数是：标签，属性，子元素
     Vue.prototype._c = function () {
         return createElementVNode(...arguments);
     };
@@ -15,7 +20,6 @@ export function renderMixin(Vue) {
             ? JSON.stringify(val)
             : val;
     };
-
     Vue.prototype.$nextTick = function (fn) {
         return nextTick(fn, this);
     };
@@ -38,6 +42,7 @@ function creteTextVNode(text) {
     return vnode(undefined, undefined, undefined, undefined, text);
 }
 // 创建虚拟dom
+// 虚拟节点可以自定义属性,ast一定是根据源代码来转换
 function vnode(tag, data, key, children, text) {
     return {
         tag,

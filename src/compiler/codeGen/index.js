@@ -45,10 +45,12 @@ function genNode(node) {
     }
 }
 
+// 这部分的核心是字符串拼接，处理成想要的形式
 function genElement(ast) {
     let props = genProps(ast);
     let children = genChildren(ast);
-
+    // 首先解析出根元素
+    // 如果attrs存在，就解析attrs，否则是一个null字符串
     let code = `_c('${ast.tag}',
     ${ast.attrs.length > 0 ? `${props}` : "null"}${
         children ? `,${children}` : ""
